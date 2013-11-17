@@ -1,0 +1,21 @@
+{
+  "name": "Painter-WebGL",
+  "version": "0.0.0",
+  "description": "",
+  "main": "index.js",
+  "devDependencies": {
+    "voxel-engine": "~0.18.4",
+    "voxel-player": "~0.1.0",
+    "emitter": "0.0.1",
+    "voxel-debris": "0.0.4",
+    "voxel-oculus": "~0.1.0",
+    "voxel-highlight": "0.0.9",
+    "voxel-items": "0.0.4",
+    "interact": "0.0.3",
+    "toolbar": "0.0.5",
+    "voxel-gamepad": "0.0.1"
+  },
+  "scripts": {},
+  "author": "",
+  "license": "BSD-2-Clause"
+}
