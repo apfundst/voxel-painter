@@ -5011,6 +5011,7 @@ game.appendTo(container);
 var player = createPlayer(game)("skin/christmas.png", { gravity: true });
 player.possess();
 player.yaw.position.set(0, 20, 0);
+var triggerView = createNonRepeater('view', player.toggle.bind(player));
 
 // effects
 // highlight blocks when you look at them
@@ -5027,6 +5028,12 @@ highlighter.on('highlight', function (voxelPos) {
 highlighter.on('remove', function (voxelPos) {
 	blockPosErase = null;
 })
+highlighter.on('highlight-adjacent', function (voxelPos) {
+	blockPosPlace = voxelPos;
+});
+highlighter.on('remove-adjacent', function (voxelPos) {
+	blockPosPlace = null;
+});
 var debris = new explode(game, { power : 1.5 });
 debris.on('collect', function (item) {
     console.log(game.materials[item.value - 1]);
@@ -5053,7 +5060,8 @@ var triggerMaterialChange = createNonRepeater('material_change', function () {
 
 game.on('tick', update);
 
-function update() {
+function update(dt) {
+	triggerView();
 	triggerMaterialChange();
 }
 
@@ -5061,8 +5069,7 @@ game.on('fire', function (target, state) {
   var position = blockPosPlace;
   if (position) {
     game.createBlock(position, currentMaterial);
-  }
-  else {
+  } else {
     position = blockPosErase;
     if (position) {
 		game.setBlock(position, 0);
@@ -5097,8 +5104,6 @@ function createNonRepeater(keyControl, fn) {
     return false;
   }
 }
-
-
 },{"voxel-debris":19,"voxel-engine":21,"voxel-highlight":62,"voxel-oculus":65,"voxel-player":66}],19:[function(require,module,exports){
 var funstance = require('funstance');
 var EventEmitter = require('events').EventEmitter;
