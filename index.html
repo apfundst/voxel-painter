@@ -30,6 +30,7 @@
 		var bridge = new OculusBridge( {
 			"onConnect" : function() { 
 				console.log("we are connected!");
+				game.camera.useQuaternion = true;
 			},
 			"onDisconnect" : function() {
 				console.log("good bye Oculus.");
@@ -64,7 +65,7 @@
 				game.camera.quaternion.copy(bodyQuat);
 				
 				//console.log("Orientation: " + values.join(", "));
-				console.log(game.camera.quaternion.x);
+				//console.log(game.camera.quaternion.x);
 			}
 		});
 		bridge.connect();
