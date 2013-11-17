@@ -5005,6 +5005,7 @@ var game = createGame({
 		, '<control>': 'alt'
 	}
 });
+window.game = game // for debugging
 game.appendTo(container);
 
 // player

@@ -26,7 +26,6 @@
 <body>
 	<script src="bundle.js"></script>
 	<script src="js/OculusBridge.min.js"></script>
-	<script src="js/jquery-1.10.2.min.js"></script>
 	<script>
 		var bridge = new OculusBridge( {
 			"onConnect" : function() { 
@@ -40,7 +39,32 @@
 			},
 			"onOrientationUpdate" : function(quatValues){
 				var values = [quatValues.x, quatValues.y, quatValues.z, quatValues.w];
+				
+				var bodyAxis = new game.THREE.Vector3(0, 1, 0);
+
+				// make a quaternion for the the body angle rotated about the Y axis
+				var bodyQuat = new game.THREE.Quaternion();
+				bodyQuat.setFromAxisAngle(bodyAxis, 0/*game.camera.rotation*/ /*bodyAngle*/);
+
+				// make a quaternion for the current orientation of the Rift
+				var riftQuat = new game.THREE.Quaternion(quatValues.x, quatValues.y, quatValues.z, quatValues.w);
+
+				// multiply the body rotation by the Rift rotation.
+				bodyQuat.multiply(riftQuat);
+
+				// Make a vector pointing along the Z axis and rotate it 
+				// according to the combined look+body angle.
+				var xzVector = new game.THREE.Vector3(0, 0, 1);
+				xzVector.applyQuaternion(bodyQuat);
+
+				// Compute the X/Z angle based on the combined look/body angle.
+				viewAngle = Math.atan2(xzVector.z, xzVector.x) + Math.PI;
+
+				// Update the camera so it matches the current view orientation
+				game.camera.quaternion.copy(bodyQuat);
+				
 				//console.log("Orientation: " + values.join(", "));
+				console.log(game.camera.quaternion.x);
 			}
 		});
 		bridge.connect();
