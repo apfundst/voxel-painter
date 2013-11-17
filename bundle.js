@@ -4981,7 +4981,7 @@ var container = document.body;
 var createGame = require("voxel-engine");
 var createHighlight = require('voxel-highlight')
 var createPlayer = require("voxel-player");
-var oculus = require('voxel-oculus');
+//var oculus = require('./node_modules/voxel-oculus-vr/OculusRiftEffect').OculusRiftEffect;
 var explode = require('voxel-debris');
 
 var game = createGame({
@@ -4989,36 +4989,40 @@ var game = createGame({
 	generateChunks: true,
 	chunkDistance: 3,
 	generate: function(x, y, z) {
-		return y === 1 ? 1 : 0;
+		return y === 2 ? 1 : 0;
 	},
 	keybindings: {
-		'W': 'forward'
+		  'W': 'forward'
 		, 'A': 'left'
 		, 'S': 'backward'
 		, 'D': 'right'
-		, 'R': 'view'
 		, 'N': 'material_change'
 		, '<mouse 1>': 'fire'
-		, '<mouse 2>': 'firealt'
 		, '<space>'  : 'jump'
-		, '<shift>'  : 'crouch'
-		, '<control>': 'alt'
-	}
+		, '<shift>': 'alt'
+	},
+	materials: materials
 });
-window.game = game // for debugging
 game.appendTo(container);
+
+/*
+module.exports = function (game, opts) {
+	return riftEffect(game);
+}
+*/
 
 // player
 var player = createPlayer(game)("skin/christmas.png", { gravity: true });
 player.possess();
 player.yaw.position.set(0, 20, 0);
-var triggerView = createNonRepeater('view', player.toggle.bind(player));
+player.playerSkin.charMaterial.visible = false; // hide player avatar
+player.playerSkin.charMaterialTrans.visible = false;
 
 // effects
 // highlight blocks when you look at them
 var blockPosPlace, blockPosErase
 var highlighter = createHighlight(game, {
-  color: 0xffff00
+  color: 0xff00ff
   , distance: 100
   , selectActive: createToggler('select')
   , animate: false
@@ -5040,7 +5044,7 @@ debris.on('collect', function (item) {
     console.log(game.materials[item.value - 1]);
 });
 
-var effect = new oculus(game, { distortion: 0.2, separation: 6 });
+//var effect = new oculus(game, { distortion: 0.1, separation: 11, aspectFactor: 1 });
 
 // block interaction stuff, uses highlight data
 var materials = [
@@ -5062,7 +5066,6 @@ var triggerMaterialChange = createNonRepeater('material_change', function () {
 game.on('tick', update);
 
 function update(dt) {
-	triggerView();
 	triggerMaterialChange();
 }
 
@@ -5105,7 +5108,10 @@ function createNonRepeater(keyControl, fn) {
     return false;
   }
 }
-},{"voxel-debris":19,"voxel-engine":21,"voxel-highlight":62,"voxel-oculus":65,"voxel-player":66}],19:[function(require,module,exports){
+
+window.game = game; // for debugging
+window.player = player;
+},{"voxel-debris":19,"voxel-engine":21,"voxel-highlight":62,"voxel-player":65}],19:[function(require,module,exports){
 var funstance = require('funstance');
 var EventEmitter = require('events').EventEmitter;
 
@@ -50834,128 +50840,6 @@ module.exports=require(27)
 }).call(this);
 
 },{}],65:[function(require,module,exports){
-module.exports = function (game, opts) {
-	var THREE = game.THREE;
-	var renderer = game.view.renderer;
-
-	this.separation = 10;
-	this.distortion = 0.1;
-	this.aspectFactor = 1;
-
-	if (opts) {
-		if (opts.separation !== undefined) this.separation = opts.separation;
-		if (opts.distortion !== undefined) this.distortion = opts.distortion;
-		if (opts.aspectFactor !== undefined) this.aspectFactor = opts.aspectFactor;
-	}
-
-	var _width, _height;
-
-	var _pCamera = new THREE.PerspectiveCamera();
-	_pCamera.matrixAutoUpdate = false;
-	_pCamera.target = new THREE.Vector3();
-
-	var _scene = new THREE.Scene();
-
-	var _oCamera = new THREE.OrthographicCamera( -1, 1, 1, -1, 1, 1000 );
-	_oCamera.position.z = 1;
-	_scene.add( _oCamera );
-
-	// initialization
-	renderer.autoClear = false;
-
-	var _params = { minFilter: THREE.LinearFilter, magFilter: THREE.NearestFilter, format: THREE.RGBAFormat };
-	var _renderTarget = new THREE.WebGLRenderTarget( 800, 600, _params );
-	var _material = new THREE.ShaderMaterial( {
-		uniforms: {
-			"tex": { type: "t", value: _renderTarget },
-			"c": { type: "f", value: this.distortion }
-		},
-		vertexShader: [
-			"varying vec2 vUv;",
-			"void main() {",
-			" vUv = uv;",
-			"	gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );",
-			"}"
-		].join("\n"),
-
-        // Formula used from the paper: "Applying and removing lens distortion in post production"
-        // by Gergely Vass , Tamás Perlaki
-		// http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.136.3745
-		fragmentShader: [
-			"uniform float c;",
-			"uniform sampler2D tex;",
-			"varying vec2 vUv;",
-			"void main()",
-			"{",
-			"	vec2 uv = vUv;",
-			"	vec2 vector = uv * 2.0 - 1.0;",
-			"   float factor = 1.0/(1.0+c);",
-			"   float vectorLen = length(vector);",
-			"   vec2 direction = vector / vectorLen;",
-			"   float newLen = vectorLen + c * pow(vectorLen,3.0);",
-			"   vec2 newVector = direction * newLen * factor;",
-			"	newVector = (newVector + 1.0) / 2.0;",
-			"	if (newVector.x < 0.0 || newVector.x > 1.0 || newVector.y < 0.0 || newVector.y > 1.0)",
-			"		gl_FragColor = vec4(0.0,0.0,0.0,1.0);",
-			"	else",
-			"   	gl_FragColor = texture2D(tex, newVector);",
-			"}"
-		].join("\n")
-	} );
-	var mesh = new THREE.Mesh( new THREE.PlaneGeometry( 2, 2 ), _material );
-	_scene.add( mesh );
-
-	this.setSize = function ( width, height ) {
-		_width = width / 2;
-		_height = height;
-		_renderTarget = new THREE.WebGLRenderTarget( width, height, _params );
-		_material.uniforms[ "tex" ].value = _renderTarget;
-		renderer.setSize( width, height );
-
-	};
-	this.setSize(game.width, game.height);
-
-	this.render = function ( scene, camera ) {
-		renderer.clear();
-    	_material.uniforms['c'].value = this.distortion;
-
-		// camera parameters
-		if (camera.matrixAutoUpdate) camera.updateMatrix();
-		_pCamera.fov = camera.fov;
-		_pCamera.aspect = camera.aspect / (2*this.aspectFactor);
-		_pCamera.near = camera.near;
-		_pCamera.far = camera.far;		
-		_pCamera.updateProjectionMatrix();
-
-
-		// Render left
-
-		var offset = new THREE.Vector3(-this.separation,0,0);
-		_pCamera.matrix.copy(camera.matrixWorld);
- 		_pCamera.matrix.translate(offset);
- 		_pCamera.matrixWorldNeedsUpdate = true;
-
-		renderer.setViewport( 0, 0, _width, _height );
-		renderer.render( scene, _pCamera, _renderTarget, true );
-		renderer.render( _scene, _oCamera );
-
-		// Render right
-
-		offset.set(this.separation,0,0);
-		_pCamera.matrix.copy(camera.matrixWorld);
-		_pCamera.matrix.translate(offset);
- 		_pCamera.matrixWorldNeedsUpdate = true;
-
-		renderer.setViewport( _width, 0, _width, _height );
-    	renderer.render( scene, _pCamera, _renderTarget, true );
-
-		renderer.render( _scene, _oCamera );
-	};
-
-	game.view.renderer = this;
-};
-
-},{}],66:[function(require,module,exports){
 var skin = require('minecraft-skin');
 
 module.exports = function (game) {
@@ -51035,7 +50919,7 @@ function parseXYZ (x, y, z) {
     return { x: Number(x), y: Number(y), z: Number(z) };
 }
 
-},{"minecraft-skin":67}],67:[function(require,module,exports){
+},{"minecraft-skin":66}],66:[function(require,module,exports){
 var THREE
 
 module.exports = function(three, image, sizeRatio) {

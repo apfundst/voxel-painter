@@ -27,10 +27,13 @@
 	<script src="bundle.js"></script>
 	<script src="js/OculusBridge.min.js"></script>
 	<script>
+	/*
 		var bridge = new OculusBridge( {
 			"onConnect" : function() { 
 				console.log("we are connected!");
 				game.camera.useQuaternion = true;
+				game.camera.fov = 72;
+				player.avatar.useQuaternion = true;s
 			},
 			"onDisconnect" : function() {
 				console.log("good bye Oculus.");
@@ -39,13 +42,14 @@
 				console.log("Field of view: " + config.FOV);
 			},
 			"onOrientationUpdate" : function(quatValues){
+			
 				var values = [quatValues.x, quatValues.y, quatValues.z, quatValues.w];
 				
 				var bodyAxis = new game.THREE.Vector3(0, 1, 0);
 
 				// make a quaternion for the the body angle rotated about the Y axis
 				var bodyQuat = new game.THREE.Quaternion();
-				bodyQuat.setFromAxisAngle(bodyAxis, 0/*game.camera.rotation*/ /*bodyAngle*/);
+				bodyQuat.setFromAxisAngle(bodyAxis, 0);
 
 				// make a quaternion for the current orientation of the Rift
 				var riftQuat = new game.THREE.Quaternion(quatValues.x, quatValues.y, quatValues.z, quatValues.w);
@@ -63,12 +67,13 @@
 
 				// Update the camera so it matches the current view orientation
 				game.camera.quaternion.copy(bodyQuat);
-				
+				//player.avatar.quaternion.copy(bodyQuat);
 				//console.log("Orientation: " + values.join(", "));
 				//console.log(game.camera.quaternion.x);
 			}
 		});
 		bridge.connect();
+	*/
 	</script>
 	<section id="container"></section>
 	<nav class="bar-tab">

@@ -2,7 +2,7 @@ var container = document.body;
 var createGame = require("voxel-engine");
 var createHighlight = require('voxel-highlight')
 var createPlayer = require("voxel-player");
-var oculus = require('voxel-oculus');
+//var oculus = require('./node_modules/voxel-oculus-vr/OculusRiftEffect').OculusRiftEffect;
 var explode = require('voxel-debris');
 
 var game = createGame({
@@ -10,36 +10,40 @@ var game = createGame({
 	generateChunks: true,
 	chunkDistance: 3,
 	generate: function(x, y, z) {
-		return y === 1 ? 1 : 0;
+		return y === 2 ? 1 : 0;
 	},
 	keybindings: {
-		'W': 'forward'
+		  'W': 'forward'
 		, 'A': 'left'
 		, 'S': 'backward'
 		, 'D': 'right'
-		, 'R': 'view'
 		, 'N': 'material_change'
 		, '<mouse 1>': 'fire'
-		, '<mouse 2>': 'firealt'
 		, '<space>'  : 'jump'
-		, '<shift>'  : 'crouch'
-		, '<control>': 'alt'
-	}
+		, '<shift>': 'alt'
+	},
+	materials: materials
 });
-window.game = game // for debugging
 game.appendTo(container);
+
+/*
+module.exports = function (game, opts) {
+	return riftEffect(game);
+}
+*/
 
 // player
 var player = createPlayer(game)("skin/christmas.png", { gravity: true });
 player.possess();
 player.yaw.position.set(0, 20, 0);
-var triggerView = createNonRepeater('view', player.toggle.bind(player));
+player.playerSkin.charMaterial.visible = false; // hide player avatar
+player.playerSkin.charMaterialTrans.visible = false;
 
 // effects
 // highlight blocks when you look at them
 var blockPosPlace, blockPosErase
 var highlighter = createHighlight(game, {
-  color: 0xffff00
+  color: 0xff00ff
   , distance: 100
   , selectActive: createToggler('select')
   , animate: false
@@ -61,7 +65,7 @@ debris.on('collect', function (item) {
     console.log(game.materials[item.value - 1]);
 });
 
-var effect = new oculus(game, { distortion: 0.2, separation: 6 });
+//var effect = new oculus(game, { distortion: 0.1, separation: 11, aspectFactor: 1 });
 
 // block interaction stuff, uses highlight data
 var materials = [
@@ -83,7 +87,6 @@ var triggerMaterialChange = createNonRepeater('material_change', function () {
 game.on('tick', update);
 
 function update(dt) {
-	triggerView();
 	triggerMaterialChange();
 }
 
@@ -126,3 +129,6 @@ function createNonRepeater(keyControl, fn) {
     return false;
   }
 }
+
+window.game = game; // for debugging
+window.player = player;
