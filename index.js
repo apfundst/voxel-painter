@@ -2,7 +2,7 @@ var container = document.body;
 var createGame = require("voxel-engine");
 var createHighlight = require('voxel-highlight')
 var createPlayer = require("voxel-player");
-//var oculus = require('./node_modules/voxel-oculus-vr/OculusRiftEffect').OculusRiftEffect;
+var oculus = require('voxel-oculus');
 var explode = require('voxel-debris');
 
 var game = createGame({
@@ -10,7 +10,7 @@ var game = createGame({
 	generateChunks: true,
 	chunkDistance: 3,
 	generate: function(x, y, z) {
-		return y === 2 ? 1 : 0;
+		return y === 1 ? 1 : 0;
 	},
 	keybindings: {
 		  'W': 'forward'
@@ -25,12 +25,6 @@ var game = createGame({
 	materials: materials
 });
 game.appendTo(container);
-
-/*
-module.exports = function (game, opts) {
-	return riftEffect(game);
-}
-*/
 
 // player
 var player = createPlayer(game)("skin/christmas.png", { gravity: true });
@@ -65,7 +59,7 @@ debris.on('collect', function (item) {
     console.log(game.materials[item.value - 1]);
 });
 
-//var effect = new oculus(game, { distortion: 0.1, separation: 11, aspectFactor: 1 });
+var effect = new oculus(game, { distortion: 0.1, separation: 11, aspectFactor: 1 });
 
 // block interaction stuff, uses highlight data
 var materials = [
