@@ -15,7 +15,8 @@
     "toolbar": "0.0.5",
     "voxel-gamepad": "0.0.1",
     "three": "~0.58.10",
-    "connect": "*"
+    "connect": "*",
+    "connect-render": "*"
   },
   "scripts": {},
   "author": "",
