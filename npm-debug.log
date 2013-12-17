@@ -1,0 +1,94 @@
+0 info it worked if it ends with ok
+1 verbose cli [ 'c:\\Program Files (x86)\\nodejs\\node.exe',
+1 verbose cli   'c:\\Program Files (x86)\\nodejs\\node_modules\\npm\\bin\\npm-cli.js',
+1 verbose cli   'install' ]
+2 info using npm@1.3.17
+3 info using node@v0.10.23
+4 warn package.json Painter-WebGL@0.0.0 No repository field.
+5 verbose readDependencies using package.json deps
+6 verbose install where, deps [ 'c:\\Users\\gameblaster64\\Desktop\\voxel-painter',
+6 verbose install   [ 'voxel-engine',
+6 verbose install     'voxel-player',
+6 verbose install     'emitter',
+6 verbose install     'voxel-debris',
+6 verbose install     'voxel-oculus-vr',
+6 verbose install     'voxel-highlight',
+6 verbose install     'voxel-items',
+6 verbose install     'interact',
+6 verbose install     'toolbar',
+6 verbose install     'voxel-gamepad',
+6 verbose install     'three',
+6 verbose install     'connect',
+6 verbose install     'connect-render' ] ]
+7 info preinstall Painter-WebGL@0.0.0
+8 verbose readDependencies using package.json deps
+9 verbose already installed skipping voxel-engine@~0.18.4 c:\Users\gameblaster64\Desktop\voxel-painter
+10 verbose already installed skipping voxel-player@~0.1.0 c:\Users\gameblaster64\Desktop\voxel-painter
+11 verbose already installed skipping emitter@0.0.1 c:\Users\gameblaster64\Desktop\voxel-painter
+12 verbose already installed skipping voxel-debris@0.0.4 c:\Users\gameblaster64\Desktop\voxel-painter
+13 verbose cache add [ 'voxel-oculus-vr@*', null ]
+14 verbose cache add name=undefined spec="voxel-oculus-vr@*" args=["voxel-oculus-vr@*",null]
+15 verbose parsed url { protocol: null,
+15 verbose parsed url   slashes: null,
+15 verbose parsed url   auth: null,
+15 verbose parsed url   host: null,
+15 verbose parsed url   port: null,
+15 verbose parsed url   hostname: null,
+15 verbose parsed url   hash: null,
+15 verbose parsed url   search: null,
+15 verbose parsed url   query: null,
+15 verbose parsed url   pathname: 'voxel-oculus-vr@*',
+15 verbose parsed url   path: 'voxel-oculus-vr@*',
+15 verbose parsed url   href: 'voxel-oculus-vr@*' }
+16 verbose cache add name="voxel-oculus-vr" spec="*" args=["voxel-oculus-vr","*"]
+17 verbose parsed url { protocol: null,
+17 verbose parsed url   slashes: null,
+17 verbose parsed url   auth: null,
+17 verbose parsed url   host: null,
+17 verbose parsed url   port: null,
+17 verbose parsed url   hostname: null,
+17 verbose parsed url   hash: null,
+17 verbose parsed url   search: null,
+17 verbose parsed url   query: null,
+17 verbose parsed url   pathname: '*',
+17 verbose parsed url   path: '*',
+17 verbose parsed url   href: '*' }
+18 verbose addNamed [ 'voxel-oculus-vr', '*' ]
+19 verbose addNamed [ null, '*' ]
+20 verbose already installed skipping voxel-highlight@0.0.9 c:\Users\gameblaster64\Desktop\voxel-painter
+21 verbose already installed skipping voxel-items@0.0.4 c:\Users\gameblaster64\Desktop\voxel-painter
+22 verbose already installed skipping interact@0.0.3 c:\Users\gameblaster64\Desktop\voxel-painter
+23 verbose already installed skipping toolbar@0.0.5 c:\Users\gameblaster64\Desktop\voxel-painter
+24 verbose already installed skipping voxel-gamepad@0.0.1 c:\Users\gameblaster64\Desktop\voxel-painter
+25 verbose already installed skipping three@~0.58.10 c:\Users\gameblaster64\Desktop\voxel-painter
+26 silly lockFile c9b56f27-voxel-oculus-vr voxel-oculus-vr@*
+27 verbose lock voxel-oculus-vr@* C:\Users\gameblaster64\AppData\Roaming\npm-cache\c9b56f27-voxel-oculus-vr.lock
+28 silly addNameRange { name: 'voxel-oculus-vr', range: '*', hasData: false }
+29 verbose url raw voxel-oculus-vr
+30 verbose url resolving [ 'https://registry.npmjs.org/', './voxel-oculus-vr' ]
+31 verbose url resolved https://registry.npmjs.org/voxel-oculus-vr
+32 info trying registry request attempt 1 at 21:06:43
+33 http GET https://registry.npmjs.org/voxel-oculus-vr
+34 verbose already installed skipping connect@* c:\Users\gameblaster64\Desktop\voxel-painter
+35 verbose already installed skipping connect-render@* c:\Users\gameblaster64\Desktop\voxel-painter
+36 http 404 https://registry.npmjs.org/voxel-oculus-vr
+37 silly registry.get cb [ 404,
+37 silly registry.get   { server: 'CouchDB/1.5.0 (Erlang OTP/R15B03)',
+37 silly registry.get     date: 'Tue, 17 Dec 2013 02:06:43 GMT',
+37 silly registry.get     'content-type': 'application/json',
+37 silly registry.get     'content-length': '52',
+37 silly registry.get     'cache-control': 'must-revalidate' } ]
+38 silly lockFile c9b56f27-voxel-oculus-vr voxel-oculus-vr@*
+39 silly lockFile c9b56f27-voxel-oculus-vr voxel-oculus-vr@*
+40 error 404 'voxel-oculus-vr' is not in the npm registry.
+40 error 404 You should bug the author to publish it
+40 error 404
+40 error 404 Note that you can also install from a
+40 error 404 tarball, folder, or http url, or git url.
+41 error System Windows_NT 6.2.9200
+42 error command "c:\\Program Files (x86)\\nodejs\\node.exe" "c:\\Program Files (x86)\\nodejs\\node_modules\\npm\\bin\\npm-cli.js" "install"
+43 error cwd c:\Users\gameblaster64\Desktop\voxel-painter
+44 error node -v v0.10.23
+45 error npm -v 1.3.17
+46 error code E404
+47 verbose exit [ 1, true ]

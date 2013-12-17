@@ -4434,7 +4434,7 @@ var container = document.body;
 var createGame = require("voxel-engine");
 var createHighlight = require('voxel-highlight')
 var createPlayer = require("voxel-player");
-var oculus = require('voxel-oculus');
+var oculus = require('voxel-oculus-vr');
 var explode = require('voxel-debris');
 
 var game = createGame({
@@ -4491,7 +4491,7 @@ debris.on('collect', function (item) {
     console.log(game.materials[item.value - 1]);
 });
 
-var effect = new oculus(game, { distortion: 0.1, separation: 11, aspectFactor: 1 });
+var effect = new oculus(game);
 
 // block interaction stuff, uses highlight data
 var materials = [
@@ -4558,7 +4558,7 @@ function createNonRepeater(keyControl, fn) {
 
 window.game = game; // for debugging
 window.player = player;
-},{"voxel-debris":17,"voxel-engine":19,"voxel-highlight":60,"voxel-oculus":63,"voxel-player":64}],17:[function(require,module,exports){
+},{"voxel-debris":17,"voxel-engine":19,"voxel-highlight":60,"voxel-oculus-vr":64,"voxel-player":65}],17:[function(require,module,exports){
 var funstance = require('funstance');
 var EventEmitter = require('events').EventEmitter;
 
@@ -50287,128 +50287,229 @@ module.exports=require(25)
 }).call(this);
 
 },{}],63:[function(require,module,exports){
-module.exports = function (game, opts) {
-	var THREE = game.THREE;
-	var renderer = game.view.renderer;
+/**
+ * @author troffmo5 / http://github.com/troffmo5
+ * @modified vladikoff / http://github.com/vladikoff
+ *
+ * Effect to render the scene in stereo 3d side by side with lens distortion.
+ * It is written to be used with the Oculus Rift (http://www.oculusvr.com/) but
+ * it works also with other HMD using the same technology
+ */
 
-	this.separation = 10;
-	this.distortion = 0.1;
-	this.aspectFactor = 1;
+module.exports.OculusRiftEffect = function (game, options) {
+  var THREE = game.THREE;
+  var renderer = game.view.renderer;
+  // worldFactor indicates how many units is 1 meter
+  var worldFactor = (options && options.worldFactor) ? options.worldFactor: 1.0;
 
-	if (opts) {
-		if (opts.separation !== undefined) this.separation = opts.separation;
-		if (opts.distortion !== undefined) this.distortion = opts.distortion;
-		if (opts.aspectFactor !== undefined) this.aspectFactor = opts.aspectFactor;
-	}
+  // Specific HMD parameters
+  var HMD = (options && options.HMD) ? options.HMD: {
+    // Parameters from the Oculus Rift DK1
+    hResolution: 1280,
+    vResolution: 720,
+    hScreenSize: 0.14976,
+    vScreenSize: 0.0935,
+    interpupillaryDistance: 0.064,
+    //lensSeparationDistance: 0.0635,
+    lensSeparationDistance: 0.0740,
+    eyeToScreenDistance: 0.041,
+    distortionK : [1.0, 0.22, 0.24, 0.0],
+    chromaAbParameter : [0.996, -0.004, 1.014, 0]
+  };
 
-	var _width, _height;
+  // Perspective camera
+  var pCamera = new THREE.PerspectiveCamera();
+  pCamera.matrixAutoUpdate = false;
+  pCamera.target = new THREE.Vector3();
 
-	var _pCamera = new THREE.PerspectiveCamera();
-	_pCamera.matrixAutoUpdate = false;
-	_pCamera.target = new THREE.Vector3();
+  // Orthographic camera
+  var oCamera = new THREE.OrthographicCamera( -1, 1, 1, -1, 0.0001, 100000 );
+  oCamera.position.z = 1;
 
-	var _scene = new THREE.Scene();
+  // pre-render hooks
+  this.preLeftRender = function() {};
+  this.preRightRender = function() {};
 
-	var _oCamera = new THREE.OrthographicCamera( -1, 1, 1, -1, 1, 1000 );
-	_oCamera.position.z = 1;
-	_scene.add( _oCamera );
+  renderer.autoClear = false;
+  var emptyColor = new THREE.Color("black");
 
-	// initialization
-	renderer.autoClear = false;
+  // Render target
+  var RTParams = { minFilter: THREE.LinearFilter, magFilter: THREE.NearestFilter, format: THREE.RGBAFormat };
+  var renderTarget = new THREE.WebGLRenderTarget( 640, 800, RTParams );
+  var RTMaterial = new THREE.ShaderMaterial( {
+    uniforms: {
+      "texid": { type: "t", value: renderTarget },
+      "scale": { type: "v2", value: new THREE.Vector2(1.0,1.0) },
+      "scaleIn": { type: "v2", value: new THREE.Vector2(1.0,1.0) },
+      "lensCenter": { type: "v2", value: new THREE.Vector2(0.0,0.0) },
+      "hmdWarpParam": { type: "v4", value: new THREE.Vector4(1.0,0.0,0.0,0.0) },
+      "chromAbParam": { type: "v4", value: new THREE.Vector4(1.0,0.0,0.0,0.0) }
+    },
+    vertexShader: [
+      "varying vec2 vUv;",
+      "void main() {",
+      " vUv = uv;",
+      "	gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );",
+      "}"
+    ].join("\n"),
 
-	var _params = { minFilter: THREE.LinearFilter, magFilter: THREE.NearestFilter, format: THREE.RGBAFormat };
-	var _renderTarget = new THREE.WebGLRenderTarget( 800, 600, _params );
-	var _material = new THREE.ShaderMaterial( {
-		uniforms: {
-			"tex": { type: "t", value: _renderTarget },
-			"c": { type: "f", value: this.distortion }
-		},
-		vertexShader: [
-			"varying vec2 vUv;",
-			"void main() {",
-			" vUv = uv;",
-			"	gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );",
-			"}"
-		].join("\n"),
+    fragmentShader: [
+      "uniform vec2 scale;",
+      "uniform vec2 scaleIn;",
+      "uniform vec2 lensCenter;",
+      "uniform vec4 hmdWarpParam;",
+      'uniform vec4 chromAbParam;',
+      "uniform sampler2D texid;",
+      "varying vec2 vUv;",
+      "void main()",
+      "{",
+      "  vec2 uv = (vUv*2.0)-1.0;", // range from [0,1] to [-1,1]
+      "  vec2 theta = (uv-lensCenter)*scaleIn;",
+      "  float rSq = theta.x*theta.x + theta.y*theta.y;",
+      "  vec2 rvector = theta*(hmdWarpParam.x + hmdWarpParam.y*rSq + hmdWarpParam.z*rSq*rSq + hmdWarpParam.w*rSq*rSq*rSq);",
+      '  vec2 rBlue = rvector * (chromAbParam.z + chromAbParam.w * rSq);',
+      "  vec2 tcBlue = (lensCenter + scale * rBlue);",
+      "  tcBlue = (tcBlue+1.0)/2.0;", // range from [-1,1] to [0,1]
+      "  if (any(bvec2(clamp(tcBlue, vec2(0.0,0.0), vec2(1.0,1.0))-tcBlue))) {",
+      "    gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);",
+      "    return;}",
+      "  vec2 tcGreen = lensCenter + scale * rvector;",
+      "  tcGreen = (tcGreen+1.0)/2.0;", // range from [-1,1] to [0,1]
+      "  vec2 rRed = rvector * (chromAbParam.x + chromAbParam.y * rSq);",
+      "  vec2 tcRed = lensCenter + scale * rRed;",
+      "  tcRed = (tcRed+1.0)/2.0;", // range from [-1,1] to [0,1]
+      "  gl_FragColor = vec4(texture2D(texid, tcRed).r, texture2D(texid, tcGreen).g, texture2D(texid, tcBlue).b, 1);",
+      "}"
+    ].join("\n")
+  } );
 
-        // Formula used from the paper: "Applying and removing lens distortion in post production"
-        // by Gergely Vass , Tamás Perlaki
-		// http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.136.3745
-		fragmentShader: [
-			"uniform float c;",
-			"uniform sampler2D tex;",
-			"varying vec2 vUv;",
-			"void main()",
-			"{",
-			"	vec2 uv = vUv;",
-			"	vec2 vector = uv * 2.0 - 1.0;",
-			"   float factor = 1.0/(1.0+c);",
-			"   float vectorLen = length(vector);",
-			"   vec2 direction = vector / vectorLen;",
-			"   float newLen = vectorLen + c * pow(vectorLen,3.0);",
-			"   vec2 newVector = direction * newLen * factor;",
-			"	newVector = (newVector + 1.0) / 2.0;",
-			"	if (newVector.x < 0.0 || newVector.x > 1.0 || newVector.y < 0.0 || newVector.y > 1.0)",
-			"		gl_FragColor = vec4(0.0,0.0,0.0,1.0);",
-			"	else",
-			"   	gl_FragColor = texture2D(tex, newVector);",
-			"}"
-		].join("\n")
-	} );
-	var mesh = new THREE.Mesh( new THREE.PlaneGeometry( 2, 2 ), _material );
-	_scene.add( mesh );
+  var mesh = new THREE.Mesh( new THREE.PlaneGeometry( 2, 2 ), RTMaterial );
 
-	this.setSize = function ( width, height ) {
-		_width = width / 2;
-		_height = height;
-		_renderTarget = new THREE.WebGLRenderTarget( width, height, _params );
-		_material.uniforms[ "tex" ].value = _renderTarget;
-		renderer.setSize( width, height );
+  // Final scene
+  var finalScene = new THREE.Scene();
+  finalScene.add( oCamera );
+  finalScene.add( mesh );
 
-	};
-	this.setSize(game.width, game.height);
+  var left = {}, right = {};
+  var distScale = 1.0;
+  this.setHMD = function(v) {
+    HMD = v;
+    // Compute aspect ratio and FOV
+    var aspect = HMD.hResolution / (2*HMD.vResolution);
 
-	this.render = function ( scene, camera ) {
-		renderer.clear();
-    	_material.uniforms['c'].value = this.distortion;
+    // Fov is normally computed with:
+    //   THREE.Math.radToDeg( 2*Math.atan2(HMD.vScreenSize,2*HMD.eyeToScreenDistance) );
+    // But with lens distortion it is increased (see Oculus SDK Documentation)
+    var r = -1.0 - (4 * (HMD.hScreenSize/4 - HMD.lensSeparationDistance/2) / HMD.hScreenSize);
+    distScale = (HMD.distortionK[0] + HMD.distortionK[1] * Math.pow(r,2) + HMD.distortionK[2] * Math.pow(r,4) + HMD.distortionK[3] * Math.pow(r,6));
+    var fov = HMD.fov ? HMD.fov : THREE.Math.radToDeg(2*Math.atan2(HMD.vScreenSize*distScale, 2*HMD.eyeToScreenDistance));
 
-		// camera parameters
-		if (camera.matrixAutoUpdate) camera.updateMatrix();
-		_pCamera.fov = camera.fov;
-		_pCamera.aspect = camera.aspect / (2*this.aspectFactor);
-		_pCamera.near = camera.near;
-		_pCamera.far = camera.far;		
-		_pCamera.updateProjectionMatrix();
+    // Compute camera projection matrices
+    var proj = (new THREE.Matrix4()).makePerspective( fov, aspect, 0.3, 10000 );
+    var h = 4 * (HMD.hScreenSize/4 - HMD.interpupillaryDistance/2) / HMD.hScreenSize;
+    left.proj = ((new THREE.Matrix4()).makeTranslation( h, 0.0, 0.0 )).multiply(proj);
+    right.proj = ((new THREE.Matrix4()).makeTranslation( -h, 0.0, 0.0 )).multiply(proj);
 
+    // Compute camera transformation matrices
+    left.tranform = (new THREE.Matrix4()).makeTranslation( -worldFactor * HMD.interpupillaryDistance/2, 0.0, 0.0 );
+    right.tranform = (new THREE.Matrix4()).makeTranslation( worldFactor * HMD.interpupillaryDistance/2, 0.0, 0.0 );
 
-		// Render left
+    // Compute Viewport
+    left.viewport = [0, 0, HMD.hResolution/2, HMD.vResolution];
+    right.viewport = [HMD.hResolution/2, 0, HMD.hResolution/2, HMD.vResolution];
 
-		var offset = new THREE.Vector3(-this.separation,0,0);
-		_pCamera.matrix.copy(camera.matrixWorld);
- 		_pCamera.matrix.translate(offset);
- 		_pCamera.matrixWorldNeedsUpdate = true;
+    // Distortion shader parameters
+    var lensShift = 4 * (HMD.hScreenSize/4 - HMD.lensSeparationDistance/2) / HMD.hScreenSize;
+    left.lensCenter = new THREE.Vector2(lensShift, 0.0);
+    right.lensCenter = new THREE.Vector2(-lensShift, 0.0);
 
-		renderer.setViewport( 0, 0, _width, _height );
-		renderer.render( scene, _pCamera, _renderTarget, true );
-		renderer.render( _scene, _oCamera );
+    RTMaterial.uniforms['hmdWarpParam'].value = new THREE.Vector4(HMD.distortionK[0], HMD.distortionK[1], HMD.distortionK[2], HMD.distortionK[3]);
+    RTMaterial.uniforms['chromAbParam'].value = new THREE.Vector4(HMD.chromaAbParameter[0], HMD.chromaAbParameter[1], HMD.chromaAbParameter[2], HMD.chromaAbParameter[3]);
+    RTMaterial.uniforms['scaleIn'].value = new THREE.Vector2(1.0,1.0/aspect);
+    RTMaterial.uniforms['scale'].value = new THREE.Vector2(1.0/distScale, 1.0*aspect/distScale);
+    console.log(lensShift);
+    console.log("ScaleIn",  new THREE.Vector2(1.0,1.0/aspect));
+    console.log("Scale",  new THREE.Vector2(1.0,1.0/aspect));
 
-		// Render right
+    // Create render target
+    renderTarget = new THREE.WebGLRenderTarget( HMD.hResolution*distScale/2, HMD.vResolution*distScale, RTParams );
+    RTMaterial.uniforms[ "texid" ].value = renderTarget;
 
-		offset.set(this.separation,0,0);
-		_pCamera.matrix.copy(camera.matrixWorld);
-		_pCamera.matrix.translate(offset);
- 		_pCamera.matrixWorldNeedsUpdate = true;
+  }
+  this.getHMD = function() {return HMD};
 
-		renderer.setViewport( _width, 0, _width, _height );
-    	renderer.render( scene, _pCamera, _renderTarget, true );
+  this.setHMD(HMD);
 
-		renderer.render( _scene, _oCamera );
-	};
+  this.setSize = function ( width, height ) {
+    left.viewport = [width/2 - HMD.hResolution/2, height/2 - HMD.vResolution/2, HMD.hResolution/2, HMD.vResolution];
+    right.viewport = [width/2, height/2 - HMD.vResolution/2, HMD.hResolution/2, HMD.vResolution];
 
-	game.view.renderer = this;
+    renderer.setSize( width, height );
+  };
+
+  this.render = function ( scene, camera ) {
+
+    var cc = renderer.getClearColor().clone();
+    var autoClear = renderer.autoClear;
+
+    renderer.autoClear = false;
+
+    // Clear
+    renderer.setClearColor(emptyColor);
+    renderer.clear();
+    renderer.setClearColor(cc);
+
+    // camera parameters
+    if (camera.matrixAutoUpdate) camera.updateMatrix();
+
+    // Render left
+    this.preLeftRender();
+
+    pCamera.projectionMatrix.copy(left.proj);
+
+    pCamera.matrix.copy(camera.matrix).multiply(left.tranform);
+    pCamera.matrixWorldNeedsUpdate = true;
+
+    renderer.setViewport(left.viewport[0], left.viewport[1], left.viewport[2], left.viewport[3]);
+
+    RTMaterial.uniforms['lensCenter'].value = left.lensCenter;
+    renderer.render( scene, pCamera, renderTarget, true );
+
+    renderer.render( finalScene, oCamera );
+
+    // Render right
+    this.preRightRender();
+
+    pCamera.projectionMatrix.copy(right.proj);
+
+    pCamera.matrix.copy(camera.matrix).multiply(right.tranform);
+    pCamera.matrixWorldNeedsUpdate = true;
+
+    renderer.setViewport(right.viewport[0], right.viewport[1], right.viewport[2], right.viewport[3]);
+
+    RTMaterial.uniforms['lensCenter'].value = right.lensCenter;
+
+    renderer.render( scene, pCamera, renderTarget, true );
+    renderer.render( finalScene, oCamera );
+
+    renderer.autoClear = autoClear;
+  };
+
+  game.view.renderer = this;
+  game.camera = pCamera;
+
 };
 
 },{}],64:[function(require,module,exports){
+var riftEffect = require('./OculusRiftEffect').OculusRiftEffect
+
+module.exports = function (game, opts) {
+
+  return riftEffect(game )
+
+};
+
+},{"./OculusRiftEffect":63}],65:[function(require,module,exports){
 var skin = require('minecraft-skin');
 
 module.exports = function (game) {
@@ -50488,7 +50589,7 @@ function parseXYZ (x, y, z) {
     return { x: Number(x), y: Number(y), z: Number(z) };
 }
 
-},{"minecraft-skin":65}],65:[function(require,module,exports){
+},{"minecraft-skin":66}],66:[function(require,module,exports){
 var THREE
 
 module.exports = function(three, image, sizeRatio) {

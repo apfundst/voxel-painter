@@ -2,7 +2,7 @@ var container = document.body;
 var createGame = require("voxel-engine");
 var createHighlight = require('voxel-highlight')
 var createPlayer = require("voxel-player");
-var oculus = require('voxel-oculus');
+var oculus = require('voxel-oculus-vr');
 var explode = require('voxel-debris');
 
 var game = createGame({
@@ -59,7 +59,7 @@ debris.on('collect', function (item) {
     console.log(game.materials[item.value - 1]);
 });
 
-var effect = new oculus(game, { distortion: 0.1, separation: 11, aspectFactor: 1 });
+var effect = new oculus(game);
 
 // block interaction stuff, uses highlight data
 var materials = [
